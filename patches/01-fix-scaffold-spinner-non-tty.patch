@@ -1,0 +1,116 @@
+From d477a1528c44dac08c30752f800d8284f222afa5 Mon Sep 17 00:00:00 2001
+From: zeel991 <darjizeel587@gmail.com>
+Date: Tue, 20 Oct 2026 00:59:47 +0530
+Subject: [PATCH] fix(create-mcp-use-app): plain progress lines when stdout is
+ not a TTY
+
+clack's spinner stops animating only when CI=true, so piped output and
+coding agents running the scaffolder receive every frame. With
+--template mcp-apps --install that was 382 frames (18 KB) of output.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../.changeset/scaffold-spinner-non-tty.md    |  5 +++
+ .../src/__tests__/spinner.test.ts             | 39 +++++++++++++++++++
+ .../create-mcp-use-app/src/prompts.ts         | 30 +++++++++++++-
+ 3 files changed, 73 insertions(+), 1 deletion(-)
+ create mode 100644 libraries/typescript/.changeset/scaffold-spinner-non-tty.md
+ create mode 100644 libraries/typescript/packages/create-mcp-use-app/src/__tests__/spinner.test.ts
+
+diff --git a/libraries/typescript/.changeset/scaffold-spinner-non-tty.md b/libraries/typescript/.changeset/scaffold-spinner-non-tty.md
+new file mode 100644
+index 0000000..adae126
+--- /dev/null
++++ b/libraries/typescript/.changeset/scaffold-spinner-non-tty.md
+@@ -0,0 +1,5 @@
++---
++"create-mcp-use-app": patch
++---
++
++Print one plain line per progress update when stdout is not a terminal, instead of every spinner frame. Piped output, CI without `CI=true`, and coding agents that run the scaffolder no longer receive hundreds of animation frames during `--install`.
+diff --git a/libraries/typescript/packages/create-mcp-use-app/src/__tests__/spinner.test.ts b/libraries/typescript/packages/create-mcp-use-app/src/__tests__/spinner.test.ts
+new file mode 100644
+index 0000000..5aa2c8d
+--- /dev/null
++++ b/libraries/typescript/packages/create-mcp-use-app/src/__tests__/spinner.test.ts
+@@ -0,0 +1,39 @@
++import { describe, expect, it } from "vitest";
++import { spinner } from "../prompts.js";
++
++function fakeOutput(isTTY: boolean) {
++  const writes: string[] = [];
++  const output = {
++    isTTY,
++    write: (chunk: string) => {
++      writes.push(chunk);
++      return true;
++    },
++  } as unknown as NodeJS.WriteStream;
++  return { output, writes };
++}
++
++describe("spinner", () => {
++  it("writes one plain line per update when output is not a TTY", () => {
++    const { output, writes } = fakeOutput(false);
++    const s = spinner(output);
++    s.start("Installing packages with npm...");
++    s.message("still going");
++    s.stop("Packages installed successfully with npm");
++
++    expect(writes).toEqual([
++      "Installing packages with npm...\n",
++      "still going\n",
++      "Packages installed successfully with npm\n",
++    ]);
++  });
++
++  it("reports cancellation without animating", () => {
++    const { output, writes } = fakeOutput(false);
++    const s = spinner(output);
++    expect(s.isCancelled).toBe(false);
++    s.cancel("Cancelled");
++    expect(s.isCancelled).toBe(true);
++    expect(writes).toEqual(["Cancelled\n"]);
++  });
++});
+diff --git a/libraries/typescript/packages/create-mcp-use-app/src/prompts.ts b/libraries/typescript/packages/create-mcp-use-app/src/prompts.ts
+index 3240aa3..45e79cc 100644
+--- a/libraries/typescript/packages/create-mcp-use-app/src/prompts.ts
++++ b/libraries/typescript/packages/create-mcp-use-app/src/prompts.ts
+@@ -66,4 +66,32 @@ export async function promptSelect(
+   return handleCancel(result);
+ }
+ 
+-export const spinner = p.spinner;
++type Spinner = ReturnType<typeof p.spinner>;
++
++/**
++ * Animated spinner on a terminal; one plain line per update everywhere else.
++ * clack only stops animating when `CI=true`, so piped output and coding agents
++ * that run the scaffolder otherwise receive every frame.
++ */
++export function spinner(output: NodeJS.WriteStream = process.stdout): Spinner {
++  if (output.isTTY === true) return p.spinner({ output });
++
++  let cancelled = false;
++  const line = (msg?: string) => {
++    if (msg) output.write(`${msg}\n`);
++  };
++  return {
++    start: line,
++    message: line,
++    stop: line,
++    error: line,
++    cancel: (msg?: string) => {
++      cancelled = true;
++      line(msg);
++    },
++    clear: () => {},
++    get isCancelled() {
++      return cancelled;
++    },
++  };
++}
+-- 
+2.54.0 (Apple Git-157)
+

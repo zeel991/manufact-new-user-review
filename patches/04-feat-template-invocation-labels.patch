@@ -1,0 +1,48 @@
+From 49262306a4220d6ae1be1743938f3df08837541f Mon Sep 17 00:00:00 2001
+From: zeel991 <darjizeel587@gmail.com>
+Date: Tue, 20 Oct 2026 01:00:47 +0530
+Subject: [PATCH] feat(create-mcp-use-app): ChatGPT invocation labels in the
+ mcp-apps template
+
+A freshly scaffolded mcp-apps project scored a warning on Manufact's
+publishing checklist ("1 tool(s) missing openai/toolInvocation metadata").
+Set both labels on show-app using the flat keys from OpenAI's Apps SDK
+reference.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../typescript/.changeset/template-invocation-labels.md      | 5 +++++
+ .../create-mcp-use-app/src/templates/mcp-apps/index.ts       | 5 +++++
+ 2 files changed, 10 insertions(+)
+ create mode 100644 libraries/typescript/.changeset/template-invocation-labels.md
+
+diff --git a/libraries/typescript/.changeset/template-invocation-labels.md b/libraries/typescript/.changeset/template-invocation-labels.md
+new file mode 100644
+index 0000000..d40d93c
+--- /dev/null
++++ b/libraries/typescript/.changeset/template-invocation-labels.md
+@@ -0,0 +1,5 @@
++---
++"create-mcp-use-app": patch
++---
++
++The `mcp-apps` template's `show-app` tool now sets `openai/toolInvocation/invoking` and `openai/toolInvocation/invoked`, so a freshly scaffolded app no longer fails the "Tool invocation metadata present" publishing check for ChatGPT.
+diff --git a/libraries/typescript/packages/create-mcp-use-app/src/templates/mcp-apps/index.ts b/libraries/typescript/packages/create-mcp-use-app/src/templates/mcp-apps/index.ts
+index 9333e40..b883940 100644
+--- a/libraries/typescript/packages/create-mcp-use-app/src/templates/mcp-apps/index.ts
++++ b/libraries/typescript/packages/create-mcp-use-app/src/templates/mcp-apps/index.ts
+@@ -68,6 +68,11 @@ export const showApp = server.tool(
+       destructiveHint: false,
+       openWorldHint: false,
+     },
++    // Status text ChatGPT shows while the tool runs and after it finishes (≤ 64 chars each).
++    _meta: {
++      "openai/toolInvocation/invoking": "Opening the app…",
++      "openai/toolInvocation/invoked": "App ready",
++    },
+   },
+   async ({ appName }, ctx) => {
+     // Brief delay so the pending skeleton is visible during dev/inspector demos.
+-- 
+2.54.0 (Apple Git-157)
+

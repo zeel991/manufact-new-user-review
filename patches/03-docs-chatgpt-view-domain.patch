@@ -1,0 +1,45 @@
+From 6d509d9bf9750764d617848f6f3080f8af272373 Mon Sep 17 00:00:00 2001
+From: zeel991 <darjizeel587@gmail.com>
+Date: Tue, 20 Oct 2026 01:02:24 +0530
+Subject: [PATCH] docs(mcp-apps): say that ChatGPT submission needs view.domain
+
+The v2 docs never mention view.domain, and a freshly scaffolded app
+fails the "View resources declare a domain" publishing check for
+ChatGPT. Add a short section to the MCP Apps quickstart with the
+requirement from OpenAI's Apps SDK reference.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/v2/typescript/mcp-apps/quickstart.mdx | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/docs/v2/typescript/mcp-apps/quickstart.mdx b/docs/v2/typescript/mcp-apps/quickstart.mdx
+index da433a2..8f25049 100644
+--- a/docs/v2/typescript/mcp-apps/quickstart.mdx
++++ b/docs/v2/typescript/mcp-apps/quickstart.mdx
+@@ -213,6 +213,22 @@ Use the Inspector to confirm that the server and view work.
+ 
+ If the tool runs but no view appears, check that `view.name` exactly matches the folder under `views/` and that the handler returns `structuredContent`.
+ 
++## Prepare for ChatGPT submission
++
++ChatGPT requires every view in a submitted app to declare one dedicated HTTPS origin, unique to your app. Without it, ChatGPT renders the view on its shared sandbox origin, which is not accepted for submission. Set it on the bound tool's `view` configuration, which emits `_meta.ui.domain`:
++
++```typescript index.ts
++view: {
++  name: "my-view",
++  description: "MCP App starter card with interactive demo hooks",
++  domain: "https://my-app.example.com",
++},
++```
++
++Use an origin only, with no path. Every view in the app uses the same origin. See OpenAI's [component resource `_meta` fields](https://developers.openai.com/apps-sdk/reference) for the requirement.
++
++To check an app before you submit it, run the [publish checks](https://docs.manufact.com/dashboard/publish-checks) on its public URL.
++
+ ## Next steps
+ 
+ - Use [`useToolContext()`](https://mcp-use-typescript-api-reference.vercel.app/modules/mcp-use.react.html#usetoolcontext) to read tool input, output, and lifecycle status.
+-- 
+2.54.0 (Apple Git-157)
+
